@@ -2,66 +2,116 @@
   <head> 
     <title>Canvas</title>
     <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js" type="text/javascript"></script>
-    <script type="text/javascript"> 
+    <script type="text/javascript">
+    var $ctx
       $(function(){
-        square = function(ctx, x, y, side) {
-          ctx.beginPath();
-          ctx.moveTo(x - side/2.0, y - side/2.0);
-          ctx.lineTo(x + side/2.0, y - side/2.0);
-          ctx.lineTo(x + side/2.0, y + side/2.0);
-          ctx.lineTo(x - side/2.0, y + side/2.0);
-          ctx.lineTo(x - side/2.0, y - side/2.0);
-          ctx.stroke();
-        }
-        
-        $('canvas').mousemove(function(e){
-          var ctx = $(this).get(0).getContext('2d');
-          ctx.clearRect(0, 0, $(this).width(), $(this).height())
+        $ctx = $('canvas').get(0).getContext('2d');
+        $.extend($ctx, {
+          getColor: function(options) {
+            if(options.red && options.green && options.blue && options.alpha) {
+              return 'rgba('+Math.floor(options.red * 255)+', '+
+                Math.floor(options.green*255)+', '+
+                Math.floor(options.blue*255)+', '+
+                options.alpha+')';
+            } else {
+              return 'black'
+            }
+          },
           
-          $(this).mouseout();
-          points = $(this).data('points');
-          if (points !== undefined) {
-            $.each(points, function(){
-              ctx.beginPath();
-              ctx.arc(this.x,  this.y, 15, 0, Math.PI*2, false);
-              ctx.strokeText("click!", this.x - 10, this.y + 4);  
-              ctx.stroke();
+          circle: function(options) {
+            if (options.created) {
+              now = (new Date()).getTime();
+              diff = now - options.created;
+              options.alpha = (Math.sin(diff/1000.0) / 6.0) + 0.5;
+              options.green = (Math.sin(diff/300.0) / 2.0) + 0.5;
+              options.blue = (Math.sin(diff/200.0) / 2.0) + 0.5;
+              options.red = (Math.sin(diff/500.0) / 2.0) + 0.5;
+            }
+
+            if(options.x && options.y) {
+              $ctx.fillStyle = options.fillStyle || $ctx.getColor(options);
+              $ctx.beginPath();
+              $ctx.arc(options.x,  options.y, (options.radius || 20), 0, Math.PI*2, false);
+              $ctx.fill();
+            }
+          },
+          
+          paintAll: function() {
+            $ctx.clearRect(0, 0, $ctx.width, $ctx.height)
+            $.each(this.objects, function(){
+              $ctx[this.type](this.data);
             })
+            
+            if(this.mouse) {this.circle(this.mouse)}
+          },
+          
+          animate: function(timeout){
+            timeout = timeout || 50;
+            $ctx.paintAll();
+            setTimeout(function(){$ctx.animate(timeout)}, timeout);
+          },
+          
+          objects: [],
+          
+          addObject: function(object) {
+            object.data.created = (new Date()).getTime();
+            $ctx.objects.push(object)
           }
-          ctx.beginPath();
-          ctx.fillStyle = 'rgba(1,0,0,0.4)';
-          ctx.arc(e.clientX - $(this).position().left,  e.clientY - $(this).position().top, 10, 0, Math.PI*2, false);
-          ctx.fill();
-        }).css('cursor', 'none').click(function(e){
-          var points = $(this).data('points')
-          if (points === undefined) { points = []; }
-          points.push({
-            x: e.clientX - $(this).position().left,
-            y: e.clientY - $(this).position().top
-          });
-          $(this).data('points', points);
         });
-
-
         
+        
+        $('canvas')
+          .mousemove(function(e){
+            if(e) {
+            $ctx.mouse = {
+              x: e.clientX - $(this).position().left,
+              y: e.clientY - $(this).position().top
+            }
+            if ($ctx.mousedown) {
+              $ctx.addObject({
+                type: 'circle',
+                data: {
+                  x: $ctx.mouse.x,
+                  y: $ctx.mouse.y
+                }
+              }
+            )};
+          }
+          }).mousedown(function(e){
+            $ctx.mousedown = true;
+          }).mouseup(function(e){
+            $ctx.mousedown = false;
+          }).resize(function(){
+            $ctx.width = $(this).width();
+            $ctx.height = $(this).height();
+          })
+        
+        
+    
         $(window).resize(function(){
-          $('canvas').attr('width',$(document).width() - 50).attr('height', $(document).height() - 50).mousemove();
+          $('canvas')
+            .attr('width',$('body').width())
+            .attr('height', $('body').height())
+            .resize()
+            .mousemove();
         }).resize();
-
-
- 
+        $ctx.animate(25);
+        
      });
+     
+     $(document).keyup(function(e){
+       switch(e.keyCode) {
+         case 76: $.getJSON('json.js', function(data){ $ctx.objects = data }); break
+         case 67: $ctx.objects = [];  break
+       }
+     })
     </script> 
     <style type="text/css"> 
-      body { margin: 20px; font-family: arial,verdana,helvetica; background: #fff;}
-      h1 { font-size: 140%; font-weight:normal; color: #036; border-bottom: 1px solid #ccc; }
-      canvas { border: 2px solid #000; float: left; margin-right: 20px; margin-bottom: 20px; }
-      pre { float:left; display:block; background: rgb(238,238,238); border: 1px dashed #666; padding: 15px 20px; margin: 0 0 10px 0; }
+      body { cursor:none; width: 100%; height: 100%; padding:0; margin:0;}
+      canvas { cursor: none; padding:0;margin:0;}
     </style> 
   </head> 
  
-  <body> 
-    <canvas></canvas> 
-  </body> 
+  <body><canvas></canvas></body> 
  
 </html>
