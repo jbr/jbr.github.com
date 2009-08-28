@@ -18,36 +18,56 @@
             }
           },
           
-          circle: function(options) {
-            if (options.created) {
-              now = (new Date()).getTime();
-              diff = now - options.created;
-              options.alpha = (Math.sin(diff/1000.0) / 6.0) + 0.5;
-              options.green = (Math.sin(diff/300.0) / 2.0) + 0.5;
-              options.blue = (Math.sin(diff/200.0) / 2.0) + 0.5;
-              options.red = (Math.sin(diff/500.0) / 2.0) + 0.5;
-            }
-
-            if(options.x && options.y) {
-              $ctx.fillStyle = options.fillStyle || $ctx.getColor(options);
-              $ctx.beginPath();
-              $ctx.arc(options.x,  options.y, (options.radius || 20), 0, Math.PI*2, false);
-              $ctx.fill();
+          shapes: {
+            rainbowCircle: function(options) {
+              if (options.created) {
+                now = (new Date()).getTime();
+                diff = now - options.created;
+                options.alpha = (Math.sin(diff/1000.0) / 6.0) + 0.5;
+                options.green = (Math.sin(diff/300.0) / 2.0) + 0.5;
+                options.blue = (Math.sin(diff/200.0) / 2.0) + 0.5;
+                options.red = (Math.sin(diff/500.0) / 2.0) + 0.5;
+              }
+              
+              $ctx.shapes.circle(options);
+            },
+          
+            circle: function(options) {
+              if(options.x && options.y) {
+                $ctx.fillStyle = options.fillStyle || $ctx.getColor(options);
+                $ctx.beginPath();
+                $ctx.arc(options.x,  options.y, (options.radius || 20), 0, Math.PI*2, false);
+                $ctx.fill();
+              }
             }
           },
           
           paintAll: function() {
             $ctx.clearRect(0, 0, $ctx.width, $ctx.height)
             $.each(this.objects, function(){
-              $ctx[this.type](this.data);
+              $ctx.shapes[this.type](this.data);
             })
             
-            if(this.mouse) {this.circle(this.mouse)}
+            if(this.mouse) {this.shapes.circle(this.mouse)}
           },
           
           animate: function(timeout){
-            timeout = timeout || 50;
+            $ctx.startedAt = $ctx.startedAt || (new Date()).getTime();
+            $ctx.framesPainted = $ctx.framesPainted + 1 || 1
+
             $ctx.paintAll();
+            
+            timeout = timeout || 50;
+
+            if ($ctx.framesPainted > 10) {
+              fps = $ctx.framesPainted / ((new Date()).getTime() - $ctx.startedAt) * 1000
+              timeout = (timeout + (1000 / fps))/2.0 - 2;
+              $ctx.fillStyle = "black"
+              $ctx.font = "15pt Arial"
+              $ctx.fillText(Math.round(fps * 10)/10 + " f/s", 10, 25)
+              $ctx.fillText('timeout '+Math.round(timeout * 10)/10 + "s", 10, 50)
+            }
+            
             setTimeout(function(){$ctx.animate(timeout)}, timeout);
           },
           
@@ -69,7 +89,7 @@
             }
             if ($ctx.mousedown) {
               $ctx.addObject({
-                type: 'circle',
+                type: 'rainbowCircle',
                 data: {
                   x: $ctx.mouse.x,
                   y: $ctx.mouse.y
@@ -94,9 +114,9 @@
             .attr('height', $('body').height())
             .resize()
             .mousemove();
-        }).resize();
-        $ctx.animate(25);
+        }).resize()
         
+        $ctx.animate(10);
      });
      
      $(document).keyup(function(e){
