@@ -1,0 +1,15 @@
+div {
+    background: #F0F0F0;
+    border: 1px solid #999;
+    color: #999;
+
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    margin: -15px;
+    -webkit-border-radius: 10px;
+    font-size: 30px;
+    line-height: 30px;
+    vertical-align: middle;
+    text-align: center;
+}
